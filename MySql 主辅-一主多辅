@@ -138,7 +138,7 @@ mysql -u bakuser -h 192.168.21.169 -p #测试在从服务器上登录到主服�
 vi /etc/my.cnf #编辑配置文件，在[mysqld]部分添加下面内容
 server-id=1 #设置服务器id，为1表示主服务器，注意：如果原来的配置文件中已经有这一行，就不用再添加了。
 log-bin=mysql-bin #启动MySQ二进制日志系统，注意：如果原来的配置文件中已经有这一行，就不用再添加了。
-binlog-do-db=yandb #需要同步的数据库名，如果有多个数据库，可重复此参数，每个数据库一行
+binlog-do-db=yandb #需要同步的数据库名，如果有多个数据库，可重复此参数，每个数据库一行  #如果没有本行，说明同步所有数据库；
 binlog-ignore-db=mysql #不同步mysql系统数据库
 
 service mysqld restart #重启MySQL
@@ -220,7 +220,7 @@ Slave2 centos6.8 mysql5.6.10 从服务器的ip：10.207.10.205
 1、编辑my.ini文件
 server-id=1 //添加server-id必须为1到232–1之间的一个正整数
 log-bin = /var/log/mysql/logbin/mysql-bin //开启log-bin二进制日志文件(注意logbin的权限必须对mysql是可写的)
-binlog-do-db = luoyan //同步luoyan库 其他库都不同步
+binlog-do-db = luoyan //同步luoyan库 其他库都不同步  如果没有本行，说明同步所有数据库；
 #binlog-ignore-db = mysql,information_schema //不同步
 2、重启mysql数据库
 3、添加slave服务器访问master服务器的帐号和权限
