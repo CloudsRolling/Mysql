@@ -1,0 +1,192 @@
+
+Mysql Cluster概述与部署
+MySQL Cluster 是一种技术，该技术允许在无共享的系统中部署“内存中”数据库的 Cluster 。通过无共享体系结构，系统能够使用廉价
+的硬件，而且对软硬件无特殊要求。此外，由于每个组件有自己的内存和磁盘，不存在单点故障。
+MySQL Cluster 由一组计算机构成，每台计算机上均运行着多种进程，包括MySQL服务器，NDB Cluster 的数据节点，管理服务器，以
+及（可能）专门的数据访问程序。关于 Cluster 中这些组件的关系。
+
+MySql Cluster最显著的优点就是高可用性,高实时性,高冗余,扩展性强。
+它允许在无共享的系统中部署"内存中"数据库的Cluster.通过无共享体系结构,系统能够使用廉价的硬件.此外,由于每个组件有自己的内存
+和磁盘,所以不存在单点故障.
+它由一组计算机构成,每台计算机上均运行者多种进程,包括mysql服务器,NDB cluster的数据节点,管理服务启,以及专门的数据访问程序
+所有的这些节点构成一个完整的mysql集群体系.数据保存在"NDB存储服务器"的存储引擎中,表(结构)则保存在"mysql服务器"中.应用程
+序 通过"mysql服务器"访问这些数据表,集群管理服务器通过管理工具(ndb_mgmd)来管理"NDB存储服务器".
+基本概念
+"NDB"是一种"内存中"的存储引擎,它具有可用性高和数据一致性好的特点.下面介绍mysql cluster 节点时,它表示进程.在单台计算机上可
+以有任意数目的节点.
+
+管理节点(MGM):这类节点的作用是管理mysql cluster内的其他节点,如配置文件和cluster 日志,启动并停止节点,运行备份等.cluster中
+的每个节点从管理服务器上检索配置数据,并请求管理服务器所在位置的方式.当数据节点内出现新的事件 时,节点将关于这类事件的信息传
+输到管理服务器上,然后,又将这类信息写入cluster日志。由于这类节点负责管理其他节点的配置,所以应在启动其他节 点之前首先启动这类
+节点.MGM节点是用命令"ndb_mgmd"来启动
+
+数据节点(NDB):这类节点用于保存cluster的数据.数据节点的数目与副本的数目相关,是片段的倍数.假设有2个副本,每个副本有2个片段,
+那么就有4个数据节点.不过没有必要设置多个副本.数据节点是用命令"ndbd"来启动的.
+
+SQL节点：这是用来访问cluster数据的节点.对于MYSQL cluster来说,客户端节点是使用NDB cluster存储引擎的传统Mysql服务器.通
+常,sql节点使用将"ndbcluster"添加到"my.cnf"后使用"mysqld" 启动
+
+此外,可以有任意数目的cluster客户端进程或应该程序.它们分为两种类型,即标准mysql客户端和管理客户端.
+标准mysql客户端:能够从php,perl,c,c++,java,python,ruby等编写的现有mysql应用程序上访问mysql cluster
+
+管理客户端:这类客户端与管理服务器相连,并提供了启动和停止节点,启动和停止消息跟踪,显示节点版本和状态,启动和停止备份等命令.
+
+使用版本
+Mysql Cluster版本：mysql-cluster-gpl-7.4.6-linux-glibc2.5-x6_64.tar.gz
+
+管理节点服务器1台----------Sql服务器2台-----------Ndb服务器2台
+
+首先修改所有服务器的hostname
+Vi /etc/hosts
+192.168.56.200 MGM1
+192.168.56.200 SQL1
+192.168.56.201 SQL2
+192.168.56.200 NDB1
+192.168.56.201 NDB2
+
+将节点服务器名配置为：MGM1
+将Sql服务器配置为：SQL1，SQL2
+将NDB服务器配置为：NDB1，NDB2
+
+一、Sql节点以及Ndb节点安装步骤：
+
+1.首先在节点服务器上安装Centos6.5，不要安装内置Mysql
+2.从官方网站上下载Mysql Cluster，这里使用到的版本为Mysql Cluster7.4.6
+3.创建用户群,groupadd mysql
+4.创建用户,useradd -g mysql mysql
+5.解压缩Mysql Cluster包，输入tar -zxvf mysql-cluster-gpl-7.4.6-linux-glibc2.5-x6_64.tar.gz
+6.将解压缩后的包移入/usr/local内，输入cp mysql-cluster-gpl-7.4.6-linux-glibc2.5-x6_64 /usr/local/mysql
+7.进入mysql文件夹,输入cd /usr/local/mysql
+8.输入chown -R root *
+9.输入chown -R mysql data
+10.输入chgrp -R mysql *
+11.安装mysql-cluster，输入scripts/mysql_install_db --user=mysql
+12.注册mysql的service，输入cp support-files/mysql.server /etc/rc.d/init.d/mysqld
+13.chmod +x /etc/rc.d/init.d/mysqld
+14.chkconfig --add mysqld
+15.运行service mysqld start启动mysql
+my.cnf
+[client]
+port=3306
+socket=/tmp/mysql.sock
+[mysqld]
+basedir=/usr/local/mysql/
+datadir=/usr/local/mysql/data
+socket=/tmp/mysql.sock
+user=mysql
+# Disabling symbolic-links is recommended to prevent assorted security risks
+symbolic-links=0
+ndbcluster
+ndb-connectstring=MGM1
+[mysql_cluster]
+ndb-connectstring=MGM1
+[mysqld_safe]
+log-error=/var/log/mysqld.log
+pid-file=/var/run/mysqld/mysqld.pid
+
+二、管理节点安装步骤：
+1.在管理节点服务器完成上述sql节点和ndb节点安装步骤后，输入cd /usr/local/mysql进入目录
+2.cp bin/ndb_mgm*/usr/local/bin
+3.cd /usr/local/bin
+4.chmod +x ndb_mgm*
+
+三、配置sql节点和ndb节点
+mysql服务启动时会默认加载/etc/my.cnf作为其配置文件，要将一个mysql服务器配置成一个数据节点和SQL节点也非常
+的简单，这是配置前的my.cnf的内容：
+1.[client]
+port=3306
+socket=/tmp/mysql.sock
+[mysqld]
+basedir=/usr/local/mysql/
+datadir=/usr/local/mysql/data
+user= mysql
+log-error=/var/lib/mysql/mysqld.err
+2.在此基础上在最下方分别加入以下语句：
+a) 如果是NDB服务器的情况下输入：
+ndbcluster
+ndb-connectstring=MGM1
+b) 如果是SQL节点服务器的情况下输入
+[mysql_cluster]
+ndb-connectstring=MGM1
+注意所有服务器必须具有相同的配置
+
+四、管理节点服务器的配置
+1.cd /var/lib
+2.mkdir mysql-cluster
+3.vi mysql-cluster/config.ini，创建配置文件
+4.在config.ini文件中添加以下内容：
+[NDBD DEFAULT]
+NoOfReplicas=1 #每个数据节点的镜像数量
+DataMemory=500M #每个数据节点中给数据分配的内存
+IndexMemory=300M #每个数据节点中给索引分配的内存
+[TCP DEFAULT]
+portnumber=2202 #数据节点的默认连接端口
+[NDB_MGMD] #配置管理节点
+hostname=MGM1
+datadir=/var/lib/mysql-cluster/ #管理节点数据(日志)目录
+[NDBD] #数据节点配置
+hostname=NDB1
+datadir=/usr/local/mysql/data/ #数据节点目录
+[NDBD]
+hostname=NDB2
+datadir=/usr/local/mysql/data/
+[MYSQLD] #SQL节点目录
+hostname=SQL1
+[MYSQLD]
+hostname=SQL2
+注释：
+[NDBD DEFAULT]：表示每个数据节点的默认配置在每个节点的[NDBD]中不用再写这些选项，只能有一个。
+[NDB_MGMD]：表示管理节点的配置，只有一个。
+[NDBD]：表示每个数据节点的配置，可以有多个。
+[MYSQLD]：表示SQL节点的配置，可以有多个，分别写上不同SQL节点的IP地址，也可以什么都不写，只保留一个空节
+点，表示任意一个IP地址都可以进行访问，此节点的个数表明了可以用来连接数据节点的SQL节点总数。
+
+五、启动
+1.管理节点的启动：
+a) Mysql cluster需要各个节点进行启动后方能够工作，节点的启动顺序为：管理节点——》NDB数据节点——》Sql节
+点。因此首先启管理节点
+b) cd /usr/local/bin
+c) ndb_mgmd -f /var/lib/mysql-cluster/config.ini
+d) 注意以上为第一次配置的情况下，如果新增节点，使用./ ndb_mgmd -f /var/lib/mysql-cluster/config.ini --
+initial进行加载，不然添加的节点不会出现在集群中
+e) 启动时可能会报个WARNING,如WARNING -- at line 7: [TCP] portnumber is deprecated，这个不用管。可以正常
+工作的。
+f) 启动后可以使用ndb_mgm -e show查看运行状态
+2.NDB节点的启动
+a) cd /usr/local/bin
+b) ./ndbd --initial
+c) 如果出现类似以下信息则表明成功连接到管理节点服务器：
+2015-06-25 12:48:03 [ndbd] INFO -- Angel connected to 'MGM1:1186'
+2015-06-25 12:48:03 [ndbd] INFO -- Angel allocated nodeid: 3
+3.SQL节点的启动：
+a) service mysqld start
+4.客户端管理
+a) 在管理服务器中输入cd /usr/local/bin/
+b) ./ndb_mgm
+c) 在ndb_mgm> 提示符下输入show：
+
+ndb_mgm> show
+ClusterConfiguration
+---------------------
+[ndbd(NDB)] 2 node(s)
+id=2 @NDB1 (mysql-5.6.24 ndb-7.4.6,Nodegroup:0,Master)
+id=3 @NDB2 (mysql-5.6.24 ndb-7.4.6,Nodegroup:1)
+[ndb_mgmd(MGM)]1 node(s)
+id=1 @MGM1 (mysql-5.6.24 ndb-7.4.6)
+[mysqld(API)] 2 node(s)
+id=4 @SQL1 (mysql-5.6.24 ndb-7.4.6)
+id=5 @SQL2 (mysql-5.6.24 ndb-7.4.6)
+5.关闭mysql cluster
+a) cd /usr/local/bin
+b) ./ndb_mgm -e shutdown
+c) 虽然mysql cluster 关闭了，但是SQL节点的mysql服务并不会停止的。接下来就可以做各种试验了。
+
+集群的启动：
+1.启动管理节点：
+bin/ndb_mgmd -f /opt/mysql-cluster/etc/config.ini --reload --configdir=/opt/mysql-cluster #修改配置文件后要加
+上--reload才会生效
+2.启动数据节点：
+bin/ndbd --connect-string="nodeid=2;host=172.16.48.204:1186" #各个数据节点的nodeid可以在管理节点上show看到
+3.启动SQL节点：
+bin/mysqld_safe --defaults-file=/opt/mysql-cluster/etc/my.cnf --basedir=/opt/mysql-cluster --datadir=/opt/mysqlcluster/
+data --user=mysql &
