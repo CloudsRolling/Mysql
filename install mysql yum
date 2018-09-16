@@ -1,0 +1,53 @@
+RHEL6.5-MySql-yum安装登录
+
+客户端工具的使用mysql：
+Linux下提供了一个访问mysql服务器的客户端工具—mysql，其由mysql软件包提供，除了这些工具之外还有一些图形化界面工具如
+Navicate或者MysqlAdmin等，本文采用mysql作为客户端，用于登录mysql服务器。
+mysql的语法如下：
+mysql -u username -ppassword -h hostname -P port -u后面链接用户名，-p后面连接密码，-h后面连接IP地址或域名，-P连接端口
+号，默认使用TCP的3306号端口默认直接使用mysql即可登录到 mysql服务器，因为默认没有设置密码。
+[root@station254 ~]# mysql 直接输入mysql即可登录
+Welcome to the MySQL monitor. Commands end with ; or \g.
+Your MySQL connection id is 2
+Server version: 5.1.52 Source distribution
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+mysql> 获得了操纵mysql数据库的接口
+以上是mysql默认的设置，默认不许要密码即可以登录到mysql服务器的root用户(相当与linux的超级用户，独立)权限，这样的做法不够
+安装，建议安装好mysql数据库之后设置mysql的root密码，使用mysqladmin工具可以设置。
+mysqladmin工具的语法： mysqladmin -u username password new_password
+如设置超级用户root的密码为redhat：mysqladmin -u root password redhat 设置了密码之后则不能直接使用mysql客户端登录
+设置密码之后需要加上-p参数才能够登录,可以直接在写在命令行中，或者是以交互式的方式输入，如下：
+
+[root@station254 ~]# mysql -u root -h localhost -p
+Enter password: 输入密码redhat，或者是将密码放在p参数后面(必须紧密连接在一起)
+
+1.当前启动mysqld服务
+[root@station254 ~]# service mysqld start 启动
+正在启动 mysqld： [确定]
+
+[root@station254 ~]# service mysqld stop 关闭
+停止 mysqld： [确定]
+
+[root@station254 ~]# service mysqld restart 重启
+停止 mysqld： [确定]
+正在启动 mysqld： [确定]
+
+[root@station254 ~]# service mysqld status 查看状态
+mysqld (pid 7556) 正在运行...
+
+2. 设置下次开机启动
+[root@station254 ~]# chkconfig --level 35 mysqld on 设置在35级别上开启服务
+[root@station254 ~]# chkconfig --list mysqld
+mysqld 0:off 1:off 2:off 3:on 4:off 5:on 6:off
+
+3. 查看监听端口：
+[root@station254 ~]# netstat -antupl | grep mysqld mysqld服务默认监听TCP的3306号端口
+tcp 0 0 0.0.0.0:3306 0.0.0.0:* LISTEN 7556/mysqld
+
+4. 查看进程状况：
+[root@station254 ~]# ps aux | grep mysqld
+root 7467 0.0 0.0 108256 1476 pts/2 S 15:41 0:00 /bin/sh /usr/bin/mysqld_safe --datadir=/var/lib /mysql --
+socket=/var/lib/mysql/mysql.sock --pid-file=/var/run/mysqld/mysqld.pid --basedir=/usr --user=mysql
+mysql 7556 0.0 0.3 377020 24324 pts/2 Sl 15:41 0:00 /usr/libexec/mysqld --basedir=/usr --datadir=/var/lib/mysql --user=mysql
+--log-error=/var/log/mysqld.log --pid-file=/var/run/mysqld/mysqld.pid --socket=/var/lib/mysql/mysql.sock
+root 7619 0.0 0.0 103272 764 pts/2 S+ 15:46 0:00 grep --color=auto mysqld
