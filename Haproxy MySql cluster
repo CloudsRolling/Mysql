@@ -1,0 +1,103 @@
+
+-----client-----------haproxy---------mysql1----------mysql2------
+192.168.1.250     192.168.1.1       192.168.1.10    192.168.1.20
+
+
+
+一、安装mysql
+[root@localhost ~]#tar -zxvf bison-2.5.tar.gz
+[root@localhost ~]#./configure && make&& make install
+[root@localhost ~]#tar -zxvf cmake-2.8.7.tar.gz
+[root@localhost ~]#./bootstrap && gmake && gmake install
+[root@localhost ~]#tar -zxvf mysql-5.5.22.tar.gz
+[root@localhost ~]#cmake -DCMAKE_INSTALL_PREFIX=/usr/local/mysql -DSYSCONFDIR=/etc/ -DDEFAULT_CHARSET=utf8 -
+DDEFAULT_COLLATION=utf8_general_ci -DWITH_EXTRA_CHARSETS=all
+[root@localhost ~]#make && make install
+初始化mysql：
+[root@localhost ~]#cp support-files/my-medium.cnf /etc/my.cnf
+[root@localhost ~]#cd scripts
+[root@localhost ~]#./mysql_install_db --basedir=/usr/local/mysql/ --datadir=/usr/local/mysql/data/ --user=mysql
+[root@localhost ~]#cp ../support-files/mysql.server /etc/init.d/mysqld
+[root@localhost ~]#ln -s /usr/local/mysql/bin/* /usr/local/bin/
+[root@localhost ~]#mysqladmin -u root password 'redhat'
+登录测试：
+[root@localhost ~]#mysql -u root -p
+创建数据库：
+[root@localhost ~]#mysql> createdata server1；
+
+
+二、安装haproxy
+1、安装
+[root@localhost ~]# yum -y install pcre-devel zlib-devel
+[root@localhost ~]# tar -zxvf haproxy-1.4.24.tar.gz -C /usr/src/
+[root@localhost ~]# cd /usr/src/haproxy-1.4.24/
+[root@localhost ~]# make TARGET=linux26 PREFIX=/usr/local/haproxy
+注意：linux26是指linux的内核版本号。
+[root@localhost ~]# make install PREFIX=/usr/local/haproxy
+2、配置haproxy
+[root@localhost ~]# mkdir /etc/haproxy
+[root@localhost ~]# cp /usr/src/haproxy-1.4.24/examples/haproxy.cfg /etc/haproxy/
+[root@localhost ~]# vim /etc/haproxy/haproxy.cfg
+修改：
+global
+log 127.0.0.1 local0 //配置日志记录，local0为日志设备，默认存放到系统日志
+log 127.0.0.1 local1 notice //notice 为日志级别，通常有7个级别
+#log loghost local0 info
+maxconn 4096 //默认最大连接数,需考虑ulimit-n限制 ：可增加ulimit-n 819200 #ulimit 的数量限制
+chroot /usr/share/haproxy //运行路径
+uid 99
+gid 99
+#debug
+#quiet
+defaults
+log global //定义日志为global中的日志
+mode tcp //模式为四层
+option tcplog //采用http的日志格式
+option dontlognull //不记录健康检查日志信息
+retries 3 //三次连接失败就认为是服务器不可用，也可以通过后面设置
+#redispatch
+maxconn 2000 //最大连接数
+contimeout 5000 //连接超时时间
+clitimeout 50000 //客户端超时时间
+srvtimeout 50000 //服务端超时时间
+listen stats
+mode http
+bind :6677
+stats enable
+stats hide-version
+stats uri /haproxyadmin?stats
+stats realm Haproxy\ Statistics
+stats auth admin:admin
+stats admin if TRUE
+listen mysqlcluster 0.0.0.0:3306
+balance roundrobin
+server m1 192.168.56.202:3306 check port 3306 maxconn 300
+server m2 192.168.56.203:3306 check port 3306 maxconn 300
+注意：
+如果启动时出现报错：/haproxy.main()] Cannot chroot(/usr/share/haproxy)
+则手动创建：
+[root@localhost ~]# mkdir /usr/share/haproxy
+如果启动时出现报错：Starting proxy cacti: cannot bind socket
+则执行：
+[root@localhost ~]# sysctl -e net.ipv4.ip_nonlocal_bind=1
+3、启动haproxy
+[root@localhost ~]# ln -s /usr/local/haproxy/sbin/* /usr/sbin/ //注意软链接的目录
+[root@localhost ~]# cp /usr/src/haproxy-1.4.24/examples/haproxy.init /etc/init.d/haproxy
+[root@localhost ~]# chmod +x /etc/init.d/haproxy
+[root@localhost ~]# /etc/init.d/haproxy start
+[root@localhost ~]# /etc/init.d/haproxy status
+[root@localhost ~]# netstat -anp | grep haproxy //占用的也是TCP的80端口
+[root@localhost ~]# chkconfig --add haproxy
+[root@localhost ~]# chkconfig haproxy on
+http://192.168.56.200:6677/haproxyadmin?stats 查看集群的状态
+
+
+四、MySql授权用户登录（集群内的mysql都要授权）
+mysql> GRANT ALL ON *.* TO 'root'@'192.168.56.%' IDENTIFIED BY 'redhat';
+mysql> flush privileges;
+
+
+五、测试：
+[root@localhost ~]# mysql -u root -h 192.168.56.200 -p
+登录两次分别查看
+可增加keepalived
