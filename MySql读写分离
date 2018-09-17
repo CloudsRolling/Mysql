@@ -1,0 +1,245 @@
+
+--------client--------------amoeba-------------主MySQL----------------从MySQL------------从MySQL---------
+192.168.1.10               192.168.1.100    192.168.1.200          192.168.1.201         192.168.1.202
+构建步骤：
+一、在amoeba服务器中：
+安装java环境
+1、安装java
+[root@localhost ~]# chmod +x jdk-6u14-linux-x64.bin
+[root@localhost ~]# ./jdk-6u14-linux-x64.bin //输yes,按回车
+[root@localhost ~]# mv jdk1.6.0_14/ /usr/local/java
+[root@localhost ~]# rm -rf /usr/bin/java //删除原有的java
+[root@localhost ~]# rm -rf /usr/bin/javac //删除原有的javac
+[root@localhost ~]# ln -s /usr/local/java/bin/* /usr/bin/java
+[root@localhost ~]# vim /etc/profile
+添加：
+export JAVA_HOME=/usr/local/java
+export CLASSPATH=$CLASSPATH:$JAVA_HOME:/lib:$JAVA_HOME/jre/lib
+export PATH=$JAVA_HOME/lib:$JAVA_HOME/bin:$PATH:$HOME/bin
+export AMOEBA_HOME=/usr/local/amoeba
+export PATH=$PATH:$AMOEBA/bin
+[root@localhost ~]# source /etc/profile
+[root@localhost ~]# java -version
+2、安装amoeba（变形虫）
+[root@localhost ~]# mkdir /usr/local/amoeba
+[root@localhost ~]# tar -zxvf amoeba-mysql-binary-2.2.0.tar.gz -C /usr/local/amoeba/
+[root@localhost ~]# chmod 755 /usr/local/amoeba/ -R
+[root@localhost ~]# /usr/local/amoeba/bin/amoeba //验证amoeba是否安装成功
+[root@localhost ~]# /usr/local/amoeba/bin/amoeba start & //启动amoeba
+[root@localhost ~]# netstat -anpt | grep java
+3、配置Amoeba（实现读写分离，两个Slave读负载均衡）
+1）主MySQL服务器、从MySQL服务器（2台）开放权限
+[root@localhost ~]# mysql -u root -p redhat
+mysql> grant all on *.* to 'root'@'192.168.1.%' identified by 'redhat';
+2）修改amoeba配置文件
+[root@localhost ~]# vim /usr/local/amoeba/conf/amoeba.xml
+修改：
+<property name="authenticator">
+<property name="user">amoeba</property> //修改
+<property name="password">redhat</property> //修改
+<queryRouter class="com.meidusa.amoeba.mysql.parser.MysqlQueryRouter">
+<property name="LRUMapSize">1500</property>
+<property name="defaultPool">master</property> //修改
+<property name="writePool">master</property> //修改
+<property name="readPool">slaves</property> //修改
+<property name="needParse">true</property>
+3）修改dbServer.xml配置文件
+[root@localhost ~]# vim /usr/local/amoeba/conf/dbServers.xml
+修改：
+<factoryConfig class="com.meidusa.amoeba.mysql.net.MysqlServerConnectionFactory">
+<!-- mysql user -->
+<property name="user">root</property> //修改用户为root
+<!-- mysql password -->
+<property name="password">redhat</property> //修改密码
+</factoryConfig>
+...部分省略....
+<dbServer name="master" parent="abstractServer"> //修改服务名称为master
+<factoryConfig>
+<!-- mysql ip -->
+<property name="ipAddress">192.168.1.200</property> //修改为主数据库服务器的IP
+</factoryConfig>
+</dbServer>
+<dbServer name="slave1" parent="abstractServer"> //修改服务名称为slave1
+<factoryConfig>
+<!-- mysql ip -->
+<property name="ipAddress">192.168.1.201</property> //修改为从数据库服务器的IP
+</factoryConfig>
+</dbServer>
+<dbServer name="slave2" parent="abstractServer"> //修改服务名称为slave2
+<factoryConfig>
+<!-- mysql ip -->
+<property name="ipAddress">192.168.1.202</property> //修改为从数据库服务器的IP
+</factoryConfig>
+</dbServer>
+<dbServer name="slaves" virtual="true"> //修改为 slaves
+<poolConfig class="com.meidusa.amoeba.server.MultipleServerPool"
+<property name="loadbalance">1</property>
+<property name="poolNames">slave1,slave2</property> //修改为 slave1,slave2
+</poolConfig>
+</dbServer>
+[root@localhost ~]# /usr/local/amoeba/bin/amoeba stop
+[root@localhost ~]# /usr/local/amoeba/bin/amoeba start &
+[root@localhost ~]# netstat -anpt | grep java
+二、MySQL数据库服务器中（三台）：
+1、在主数据库上安装ntp时间服务
+[root@localhost ~]# yum -y install ntp
+[root@localhost ~]# vim /etc/ntp.conf
+添加：
+server 127.127.1.0
+fudge 127.127.1.0 stratum 8
+[root@localhost ~]# service ntpd restart
+2、在从数据库上安装ntp时间服务
+[root@localhost ~]# yum -y install ntpdate
+[root@localhost ~]# ntpdate 192.168.1.1
+3、安装MySQL服务（三台数据库服务器安装保持一致）
+1）安装cmake软件
+[root@localhost ~]# tar -zxvf cmake-2.8.6.tar.gz -C /usr/src/
+[root@localhost ~]# cd /usr/src/cmake-2.8.6/
+[root@localhost cmake-2.8.6]# ./configure && gmake && gmake install
+2）安装mysql软件
+[root@localhost ~]# tar -zxvf mysql-5.5.22.tar.gz -C /usr/src/
+[root@localhost ~]# cd /usr/src/mysql-5.5.22/
+[root@localhost mysql-5.5.22]# cmake -
+DCMAKE_INSTALL_PREFIX=/usr/local/mysql -DDEFAULT_CHARSET=utf8 -
+DDEFAULT_COLLATION=utf8_general_ci -DSYSCONFDIR=/etc -
+DWITH_EXTRA_CHARSETS=all
+[root@localhost mysql-5.5.22]# make && make install
+[root@localhost ~]# cp /usr/src/mysql-5.5.22/support-files/mymedium.
+cnf /etc/my.cnf
+[root@localhost ~]# cp /usr/src/mysql-5.5.22/support-files/mysql.server
+/etc/init.d/mysqld
+[root@localhost ~]# chmod +x /etc/init.d/mysqld
+[root@localhost ~]# chown -R mysql:mysql /usr/local/mysql
+[root@localhost ~]# ln -s /usr/local/mysql/bin/* /usr/local/bin/
+[root@localhost ~]# /usr/local/mysql/scripts/mysql_install_db --
+user=mysql --basedir=/usr/local/mysql/ --datadir=/usr/local/mysql/data/
+[root@localhost ~]# service mysqld restart
+[root@localhost ~]# chkconfig --add mysqld
+[root@localhost ~]# chkconfig mysqld on
+验证：
+[root@localhost ~]# mysqladmin -u root password 'redhat'
+[root@localhost ~]# mysql -u root -p
+4、主从配置
+1）主数据库服务器配置
+[root@localhost ~]# vim /etc/my.cnf
+添加：
+server-id=11 //修改
+log-bin=master-bin //修改
+log-slave-updates=true //添加
+[root@localhost ~]# service mysqld restart
+[root@localhost ~]# mysql -u root -p
+mysql> grant replication slave on *.* to 'slave'@'192.168.1.%' identified by 'redhat';
+mysql> flush privileges;
+mysql> show master status;
+mysql> quit
+2）从数据库服务器配置
+[root@localhost ~]# vim /etc/my.cnf
+添加：
+server-id=22 //修改
+relay-log=relay-log-bin //添加
+relay-log-index=slave-relay-bin.index //添加
+注意：主—从的ID不能相同。
+[root@localhost ~]# service mysqld restart
+[root@localhost ~]# mysql -u root -p
+mysql> change master to
+master_host='192.168.1.200',
+master_user='slave',
+master_password='redhat',
+master_log_file='master-bin.000001',
+master_log_pos=336;
+mysql> start slave;
+mysql> show slave status\G; //结尾不能加; 否则或报错。
+Slave_IO_Running: Yes //确保为YES
+Slave_SQL_Running: Yes //确保为YES
+mysql> quit
+问题说明：
+1、如果出现ERROR: No query specified
+则：原因是语法错误，去掉语句后的;号。
+2、如果bin-log日志不更新，或者无法进行数据同步，
+则：删除bin-log日志，重新启动服务即可。
+3、导致lave_IO_Running 为connecting 的原因主要有以下 3 个方面：
+1）网络不通
+2）密码不对
+3）pos不对
+4、验证：
+1）主数据库服务器：
+[root@localhost ~]# mysql -u root -p
+mysql> show databases;
+mysql> create database masterdb;
+mysql> show databases;
+mysql> use masterdb;
+mysql> create table count (id int(5),name char(12));
+mysql> show tables;
+mysql> quit
+2)从数据库服务器：
+[root@localhost ~]# mysql -u root -p
+mysql> show databases;
+mysql> show databases;
+mysql> use masterdb
+mysql> show tables;
+mysql> quit
+三、验证：
+1、在client上：
+[root@localhost ~]# mysql -u amoeba -p123456 -h 192.168.1.100 -P8066
+mysql> use masterdb;
+mysql> create table biao1 (id int(5),name char(10),address char(10));
+2、在主MySQL服务器上：
+mysql> insert into biao1 values(1,'hehe','master');
+3、在2台从MySQL服务器上：
+slave1：
+mysql> stop slave;
+mysql> insert into biao1 values(2,'hehe','slave1');
+slave2：
+mysql> stop slave;
+mysql> insert into biao1 values(3,'hehe','slave2');
+4、在客户端测试：
+查询biao1：
+mysql> select * from biao1;
++------+------+---------+
+| id | name | address |
++------+------+---------+
+| 1 | hehe | slave1 |
++------+------+---------+
+1 row in set (0.00 sec)
+mysql> select * from biao1;
++------+------+---------+
+| id | name | address |
++------+------+---------+
+| 3 | hehe | slave2 |
++------+------+---------+
+1 row in set (0.00 sec)
+mysql> select * from biao1;
++------+------+---------+
+| id | name | address |
++------+------+---------+
+| 2 | hehe | slave1 |
++------+------+---------+
+1 row in set (0.00 sec)
+mysql> select * from biao1;
++------+------+---------+
+| id | name | address |
++------+------+---------+
+| 3 | hehe | slave2 |
++------+------+---------+
+1 row in set (0.01 sec)
+查到记录，说明记录分别从两台从MySQL数据库读取
+插入一条记录：
+mysql> insert into biao1 values(4,'hehe','write_zhu');
+Query OK, 1 row affected (0.01 sec)
+mysql> select * from biao1;
++------+------+---------+
+| id | name | address |
++------+------+---------+
+| 3 | hehe | slave2 |
++------+------+---------+
+1 row in set (0.01 sec)
+mysql> select * from biao1;
++------+------+---------+
+| id | name | address |
++------+------+---------+
+| 2 | hehe | slave1 |
++------+------+---------+
+1 row in set (0.01 sec)
+没有查到记录，说明这条记录只写入主MySQL数据库中
+错误代码2006解决方案
+mysql> set global max_allowed_packet=1024*1024*16;
