@@ -1,0 +1,55 @@
+使用第三方工具
+MySQL Enterprise Monitor，MySQL企业版监控工具。
+MONyog – MySQL Monior and Advisor，MONyog大家都不陌生，windows下比较好用的MySQLGUI提供者，也有相关MySQL监控工具。
+
+
+
+脚本监控
+#!/bin/bash
+
+ 
+### VARIABLES ###
+SERVER=`hostname`
+SECONDS_BEHIND_MASTER=`/usr/bin/mysql -e "SHOW SLAVE STATUS\G"| grep "Seconds_Behind_Master" | awk -F": " {' print $2 '}`
+SENTFILE_BROKEN=/tmp/mysql_slaverep_broken.sent
+SENTFILE_BEHIND=/tmp/mysql_slaverep_behind.sent
+ 
+ 
+### CHECK FOR REPLICATION BREAK ###
+if [ "$SECONDS_BEHIND_MASTER" == "NULL" ]; then
+        # Slave replication is broken
+ 
+        if [ ! -f $SENTFILE_BROKEN ]; then
+                # This has not been reported before
+                echo "Slave replication broken on $SERVER"
+                touch $SENTFILE_BROKEN
+        fi
+else
+        # Slave replication is not broken
+ 
+        if [ -f $SENTFILE_BROKEN ]; then
+                # It was broken before which was reported. Clear that state
+                echo "Slave replication has been restored on $SERVER"
+                rm $SENTFILE_BROKEN
+        fi
+ 
+        ### CHECK FOR REPLICATION DELAY ###
+        if [ "$SECONDS_BEHIND_MASTER" -gt "60" ]; then
+                # Slave replication is delayed
+ 
+                if [ ! -f $SENTFILE_BEHIND ]; then
+                        # This has not been reported before
+                        echo "Slave replication is $SECONDS_BEHIND_MASTER seconds behind master on $SERVER"
+                        touch $SENTFILE_BEHIND
+                fi
+        else
+                # Slave replication is not delayed
+ 
+                if [ -f $SENTFILE_BEHIND ]; then
+                        # It was delayed before which was reported. Clear that state
+                        echo "Slave replication delay has been recovered and is now $SECONDS_BEHIND_MASTER seconds behind master on $SERVER"
+                        rm $SENTFILE_BEHIND
+                fi
+        fi
+ 
+fi
