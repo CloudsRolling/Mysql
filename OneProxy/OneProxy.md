@@ -30,6 +30,7 @@ OneProxy的主要功能有：
  
                                                                                 
  二、安装步骤
+
 　　 1）下载
      wget http://www.onexsoft.com/software/oneproxy-rhel6-linux64-v6.2.0-ga.tar.gz  
      
@@ -42,12 +43,12 @@ OneProxy的主要功能有：
      
      5）修改demo.sh
      
-	###############################
-	#/bin/bash
-	export ONEPROXY_HOME=/usr/local/oneproxy/   #根据自己环境配置，修改为oneproxy解压后的目录路径
-	#valgrind --leak-check=full \
-	${ONEPROXY_HOME}/bin/oneproxy --defaults-file=${ONEPROXY_HOME}/conf/proxy.conf
-	#####################################
+	   ###############################
+	   #/bin/bash
+	   export ONEPROXY_HOME=/usr/local/oneproxy/   #根据自己环境配置，修改为oneproxy解压后的目录路径
+	   #valgrind --leak-check=full \
+	   ${ONEPROXY_HOME}/bin/oneproxy --defaults-file=${ONEPROXY_HOME}/conf/proxy.conf
+	   #####################################
 
 	6）创建相关数据库，用户名和密码
         已经安装配置好MySQL
@@ -83,31 +84,57 @@ OneProxy的主要功能有：
 OneProxy的配置文件conf/proxy.conf：
 ###############################
 [oneproxy]
+
 keepalive = 1
+
 event-threads = 4
+
 log-file = log/oneproxy.log           				#指定日志文件路径
+
 pid-file = log/oneproxy.pid          			    #指定PID文件路径
+
 lck-file = log/oneproxy.lck          				#指定LCK文件路径
+
 mysql-version = 5.6.27               				#版本
+
 proxy-address = 0.0.0.0:3307                        #指定自身监听端口  
+
 proxy-master-addresses.1 = 10.0.0.10:3306@A         #指定主服务器的IP地址  格式：IP地址:端口@oneproxy组
+
 proxy-slave-addresses.1 = 10.0.0.11:3306@A          #指定从服务器的IP地址  格式：IP地址:端口@oneproxy组
-proxy-master-addresses.2 = 10.0.0.12:3306@B         
+
+proxy-master-addresses.2 = 10.0.0.12:3306@B     
+    
 proxy-slave-addresses.2 = 10.0.0.13:3306@B
+
 proxy-user-list = test/1378F6CC3A8E8A43CA388193FBED5405982FBBD3@test         #用户列表   格式：用户名/密文密码@数据库名称
+
 proxy-part-template = conf/template.txt
+
 proxy-part-tables.1 = conf/part.txt                                          #指定分表分库的配置文件
+
 proxy-part-tables.2 = conf/part2.txt                                         #指定分表分库的配置文件
+
 proxy-charset = utf8_general_ci                                                #指定数据库字符集
+
 proxy-group-policy.1  = A:master-only 
+
 proxy-group-policy.2 = B:master-only
+
 proxy-table-map.1=X:B
+
 proxy-table-map.2=Y:A
+
 proxy-table-map.3=Z:A
+
 proxy-secure-client = 127.0.0.1
+
 proxy-sequence.1 = default
+
 #remote-address = 192.168.1.119:4041
+
 #vip-address = 192.168.1.120/eth0:0
+
  
  
 #####################################
