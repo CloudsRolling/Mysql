@@ -11,34 +11,33 @@ OneProxy的主要功能有：
 8. 读写随机
 
 重要概念
-     Server Group
-     在OneProxy中，一组主从复制的MySQL集群被称为Server Group。如图. A所示，有Server Group A和Server Group B。
-      ![image](https://github.com/luoyan321/Mysql/blob/master/OneProxy/图/图片1.png) 
-      
-     在OneProxy中，垂直分库和水平分表的实现思路都是建立在Server Group的概念上。为了更好地说明，我们假设以下场景。
-      
-     A）Server Group A中有三张表table X, table Y, table Z，其中应用对table X操作非常频繁，占用大量I/O带宽，严重影响了应用对tableY, tableZ的操作效率。
-      ![image](https://github.com/luoyan321/Mysql/blob/master/OneProxy/图/图片2.png) 
-                                                                 
-解决方案1.0：把table X移到另一组数据库，即Server Group B中（如图C所示），然后通过修改OneProxy的配置来改变table X的路由规则，无须改动应用。
-      ![image](https://github.com/luoyan321/Mysql/blob/master/OneProxy/图/图片3.png) 
+ Server Group
+   在OneProxy中，一组主从复制的MySQL集群被称为Server Group。如图. A所示，有Server Group A和Server Group B。
+   ![image](https://github.com/luoyan321/Mysql/blob/master/OneProxy/图/图片1.png) 
+   在OneProxy中，垂直分库和水平分表的实现思路都是建立在Server Group的概念上。为了更好地说明，我们假设以下场景。
+     A）Server Group A中有三张表table X, table Y, table Z，其中应用对table X操作非常频繁，占用大量I/O带宽，严重影响了应用对tableY, tableZ的操作效率。
+   ![image](https://github.com/luoyan321/Mysql/blob/master/OneProxy/图/图片2.png) 
+    解决方案1.0：把table X移到另一组数据库，即Server Group B中（如图C所示），然后通过修改OneProxy的配置来改变table X的路由规则，无须改动应用。
+   ![image](https://github.com/luoyan321/Mysql/blob/master/OneProxy/图/图片3.png) 
  
-                                                                 
-     B）在使用了解决方案1.0后，系统的I/O压力得到缓解。由于后期业务越来越多，Server Group B的写入压力越来越大，响应时间变慢。
-解决方案2.0 : 把Server Group B中的table X水平拆分，将X_00, X_01留在Server Group B中，把X_02，X_03留在Server Group C中，如图D所示
-       ![image](https://github.com/luoyan321/Mysql/blob/master/OneProxy/图/图片4.png) 
+    B）在使用了解决方案1.0后，系统的I/O压力得到缓解。由于后期业务越来越多，Server Group B的写入压力越来越大，响应时间变慢。
+     解决方案2.0 : 把Server Group B中的table X水平拆分，将X_00, X_01留在Server Group B中，把X_02，X_03留在Server Group C中，如图D所示
+   ![image](https://github.com/luoyan321/Mysql/blob/master/OneProxy/图/图片4.png) 
  
                                                                                 
- 
- 
-二、安装步骤
+ 二、安装步骤
 　　 1）下载
      wget http://www.onexsoft.com/software/oneproxy-rhel6-linux64-v6.2.0-ga.tar.gz  
+     
      2）上传到目标主机的目录：/usr/local 
+     
      3）cd /usr/local/
 　　　 tar zxvf oneproxy-rhel6-linux64-v6.2.0-ga.tar.gz
+    
      4）cd oneproxy/
+     
      5）修改demo.sh
+     
 ###############################
 #/bin/bash
 export ONEPROXY_HOME=/usr/local/oneproxy/   #根据自己环境配置，修改为oneproxy解压后的目录路径
@@ -47,7 +46,7 @@ ${ONEPROXY_HOME}/bin/oneproxy --defaults-file=${ONEPROXY_HOME}/conf/proxy.conf
 #####################################
 
  
- 　 6）创建相关数据库，用户名和密码
+    6）创建相关数据库，用户名和密码
         已经安装配置好MySQL
 　　　mysql -uroot
 　　　mysql> create database if not exists test character set utf8 ;
