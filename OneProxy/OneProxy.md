@@ -50,6 +50,7 @@ OneProxy的主要功能有：
      2）上传到目标主机的目录：/usr/local 
      
      3）cd /usr/local/
+
 　　　 tar zxvf oneproxy-rhel6-linux64-v6.2.0-ga.tar.gz
     
      4）cd oneproxy/
@@ -68,7 +69,7 @@ OneProxy的主要功能有：
 	   
 	   #####################################
 
-	6）创建相关数据库，用户名和密码
+	 6）创建相关数据库，用户名和密码
 	
         已经安装配置好MySQL
 		
@@ -78,27 +79,27 @@ OneProxy的主要功能有：
 
 　　	mysql> grant insert, update, delete, select on test.* to test@'10.0.0.%' identified by 'test';　
 
-	7）chmod +x ./demo.sh
+	 7）chmod +x ./demo.sh
 	
 　　　 ./demo.sh
     
-	8）检查是否成功启动。
+	 8）检查是否成功启动。
 	
-     ps aux | grep mysql-proxy | grep -v grep
+      ps aux | grep mysql-proxy | grep -v grep
 
-     如有输出，则启动成功。
+      如有输出，则启动成功。
 
-     若无输出，请检查运行日志/usr/local/oneproxy/log/oneproxy.log
+      若无输出，请检查运行日志/usr/local/oneproxy/log/oneproxy.log
 
-　　 注：目前OneProxy有个限制，如果/etc/hosts文件有IPv6地址，则无法启动，因此需要注释掉
+　 　 注：目前OneProxy有个限制，如果/etc/hosts文件有IPv6地址，则无法启动，因此需要注释掉
 
-     [root@oneproxy oneproxy]# vim /etc/hosts
- 
-　　 127.0.0.1 localhost localhost.localdomain localhost4 localhost4.localdomain4
+      [root@oneproxy oneproxy]# vim /etc/hosts
+  
+　　  127.0.0.1 localhost localhost.localdomain localhost4 localhost4.localdomain4
 
 　　　#::1 localhost localhost.localdomain localhost6 localhost6.localdomain6
 
- 	9）通过mysql client连接OneProxy
+ 	 9）通过mysql client连接OneProxy
 
       mysql -u test -h 10.0.0.9 -P3307 -p
 	  
@@ -108,9 +109,9 @@ OneProxy的主要功能有：
 
 下面给出在以下几种场景下，如何正确的配置OneProxy
 
-  1. 垂直分库
+1. 垂直分库
 
-  ![image](https://github.com/luoyan321/Mysql/blob/master/OneProxy/图/图片5.png) 
+![image](https://github.com/luoyan321/Mysql/blob/master/OneProxy/图/图片5.png) 
 
  
 OneProxy的配置文件conf/proxy.conf：
@@ -245,18 +246,29 @@ OneProxy分库分表配置文件conf/part.txt
 
 　　{
 　　　　"table" : "X",
+
 　　　　"pkey" : "id",
+
 　　　　"type" : "char",
+
 　　　　"method" : "crc32",
-　　　　"partitions" :　　　　　
+
+　　　　"partitions" :　
+　　　　
 　　　　　　[
+
 　　　　　　　　{ "suffix" : "_00", "group": "B" },
+
 　　　　　　　　{ "suffix" : "_01", "group": "B" },
+
 　　　　　　　　{ "suffix" : "_02", "group": "C" },
+
 　　　　　　　　{ "suffix" : "_03", "group": "C"}
+
 　　　　　　]
 
 　　}
+
 ]
 
 ####################################
@@ -355,6 +367,7 @@ proxy-sequence.1 = default
 #####################################
  
 注：10.0.0.10为主库，10.0.0.11为从库
+
  
 6. 读写分离（master参与读）
 
@@ -507,21 +520,21 @@ proxy-sequence.1 = default
 
 1、口令加密
 
-　　此时可以启动oneproxy
+此时可以启动oneproxy
 
-　　cd /usr/local/oneproxy
+cd /usr/local/oneproxy
 
-    sh ./demo.sh
+sh ./demo.sh
 
-　　进入管理端口,然后键入passwd <string>。
+进入管理端口,然后键入passwd <string>。
 
 mysql -uadmin -pOneProxy -P4041 --protocol=TCP
 
 passwd test
 
-　　输出为：
+输出为：
 
- 　　1378F6CC3A8E8A43CA388193FBED5405982FBBD3
+1378F6CC3A8E8A43CA388193FBED5405982FBBD3
  
  
 
