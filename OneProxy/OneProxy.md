@@ -1,4 +1,3 @@
-　OneProxy是由原支付宝首席架构师楼方鑫开发，目前由楼方鑫创立的杭州平民软件公司（@平民架构）提供技术支持。目前已有多家公司在生成环境中使用，其中包括了支付、电商等行业。
  
 OneProxy的主要功能有：
 1. 垂直分库
@@ -13,8 +12,7 @@ OneProxy的主要功能有：
 重要概念
      Server Group
      在OneProxy中，一组主从复制的MySQL集群被称为Server Group。如图. A所示，有Server Group A和Server Group B。
-
-                                                            图. A
+      ![image](https://github.com/luoyan321/Mysql/blob/master/OneProxy/图/图片1.png)                                                    
      在OneProxy中，垂直分库和水平分表的实现思路都是建立在Server Group的概念上。为了更好地说明，我们假设以下场景。
      A）Server Group A中有三张表table X, table Y, table Z，其中应用对table X操作非常频繁，占用大量I/O带宽，严重影响了应用对tableY, tableZ的操作效率。
 
