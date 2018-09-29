@@ -41,9 +41,8 @@ OneProxy的主要功能有：
      5）修改demo.sh
 ###############################
 #/bin/bash
-#
 export ONEPROXY_HOME=/usr/local/oneproxy/   #根据自己环境配置，修改为oneproxy解压后的目录路径
-# valgrind --leak-check=full \
+#valgrind --leak-check=full \
 ${ONEPROXY_HOME}/bin/oneproxy --defaults-file=${ONEPROXY_HOME}/conf/proxy.conf
 #####################################
 
